@@ -1,50 +1,101 @@
-# menu.py
 import pygame
 from sys import exit
+import math
+
+class UIText:
+    def __init__(
+        self,
+        text,
+        font,
+        color,
+        y_ratio,
+        blink=False,
+        blink_speed=2
+    ):
+        self.text = text
+        self.font = font
+        self.color = color
+        self.y_ratio = y_ratio
+        self.blink = blink
+        self.blink_speed = blink_speed
+
+    def draw(self, window):
+        text_surface = self.font.render(self.text, True, self.color)
+
+        if self.blink:
+            time = pygame.time.get_ticks() / 1000
+            alpha = int((math.sin(time * self.blink_speed) + 1) / 2 * 255)
+            text_surface.set_alpha(alpha)
+
+        text_rect = text_surface.get_rect(
+            centerx=window.get_width() // 2,
+            centery=int(window.get_height() * self.y_ratio)
+        )
+
+        window.blit(text_surface, text_rect)
+
+
+def draw_text_centered(window, font, text, color, y_ratio):
+    text_surface = font.render(text, True, color)
+    text_rect = text_surface.get_rect(
+        centerx=window.get_width() // 2,
+        centery=int(window.get_height() * y_ratio)
+    )
+    window.blit(text_surface, text_rect)
 
 
 def main():
+    pygame.init()
+
     game_width = 600
     game_height = 400
-    pygame.init()
+
     window = pygame.display.set_mode((game_width, game_height))
     pygame.display.set_caption("Casino")
     clock = pygame.time.Clock()
 
-    """Game Variables"""
     main_menu = True
-    game_paused = False
 
-    font_size = 16
-    font = pygame.font.SysFont("mono", font_size)
+    '''Font Settings'''
+    base_font_size = 16
+    font = pygame.font.SysFont("mono", base_font_size)
+    title_font_size = 30
+    title_font = pygame.font.SysFont("mono", title_font_size)
 
-    def draw_main_menu():
-        font = pygame.font.SysFont("mono", 25)
-        text = font.render("Casino", True, "white")
-        text_rect = text.get_rect(center=pygame.display.get_surface().get_rect().center)
-        window.blit(text, text_rect)
-    def draw_text(text, text_col, x, y):
-        text_surface = font.render(text, True, text_col)
-        window.blit(text_surface, (x, y))
-        y += font_size + 5
-        pygame.display.update()
+    press_space_text = UIText(
+        text="Press SPACE to Continue",
+        font=font,
+        color="grey",
+        y_ratio=0.5,
+        blink=True,
+        blink_speed = 2
+    )
+
+    """Background Settings"""
+    background_original = pygame.image.load('assets/tabletop.jpg').convert_alpha()
+    background_resolution = (game_width, game_height)
+    background = pygame.transform.smoothscale(background_original, background_resolution)
 
     while True:
         window.fill("black")
+        # Background image
+        window.blit(background, (0 , 0))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                quit()
+                pygame.quit()
+                exit()
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     main_menu = False
 
-                    break
-
         if main_menu:
-            draw_main_menu()
-            draw_text("Press SPACE to Continue", "Grey", 180, 210)
-
+            draw_text_centered(window, title_font, "Casino", "white", 0.45)
+            press_space_text.draw(window)
 
         pygame.display.update()
         clock.tick(60)
+
+
+main()
