@@ -1,18 +1,11 @@
 # main.py
-
-from games.blackjack import main as blackjack_main
+from ui.menu import main as start_window
+from games.blackjack import play_round
 from core.player import balance
 
 
 def main():
-    print("Welcome to the Casino!")
-    print("You are the player, using your balance from player.py. You currently have a balance of $", balance )
-    print("Starting a game of Blackjack...\n")
-
-    blackjack_main()  # Start the blackjack game loop
-
+    start_window()
 
 if __name__ == "__main__":
     main()
-
-
