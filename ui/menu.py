@@ -33,7 +33,7 @@ class Menu:
 
         # State flags
         self.game_select = False
-        self.start_game = False
+        self.selected_game = None
 
         # UI elements
         self.press_space_text = UIText(
@@ -54,6 +54,7 @@ class Menu:
 
         # Game names for buttons
         self.game_names = ["Baccarat", "Blackjack", "Craps", "Roulette"]
+        self.selected_game = None
 
         # Button parameters
         self.num_buttons = len(self.game_names)
@@ -85,11 +86,13 @@ class Menu:
                 mouse_pos = event.pos
                 for i, banner in enumerate(self.banners):
                     if banner.collidepoint(mouse_pos):
-                        print(f"Selected {self.game_names[i]}")
-                        self.start_game = True
-        else:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                self.game_select = True
+                        self.selected_game = self.game_names[i].lower()
+                        self.game_select = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.game_select = False
+
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            self.game_select = True
 
     def update(self, dt):
         # Fade-in banners
