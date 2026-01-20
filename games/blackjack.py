@@ -1,6 +1,4 @@
-# games/blackjack.py
 import pygame
-import math
 from rng.shoe import Shoe
 from core.player import balance
 
@@ -8,8 +6,8 @@ from core.player import balance
 class Blackjack:
 
     BETTING = "betting"
-    PLAYER_TURN = "player_turn"
-    DEALER_TURN = "dealer_turn"
+    PLAYER = "player_turn"
+    DEALER = "dealer_turn"
     PAYOUT = "payout"
 
     def __init__(self, window):
@@ -28,12 +26,20 @@ class Blackjack:
         self.player_BJ = False
         self.shoe = Shoe(num_decks=6)
 
+        self.state_start_time = pygame.time.get_ticks()
+        self.state_delay = 700
+
         # Background
         bg_original = pygame.image.load("assets/tabletop.jpg").convert_alpha()
         self.background = pygame.transform.smoothscale(
             bg_original,
             self.window.get_size()
         )
+
+    def set_state(self, new_state, delay=700):
+        self.state = new_state
+        self.state_delay = delay
+        self.state_start_time = pygame.time.get_ticks()
 
     """Input Handling"""
     def handle_event(self, event):
@@ -43,28 +49,23 @@ class Blackjack:
                 self.exit_to_menu = True
 
             if self.state == "betting":
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_SPACE:
                     self.initial_deal()
 
             elif self.state == "player_turn":
                 if event.key == pygame.K_h:
                     self.player_hit()
                 elif event.key == pygame.K_s:
-                    self.state = "dealer_turn"
+                    self.set_state("dealer_turn")
                     self.message = "Dealer's turn"
                 elif event.key == pygame.K_d and self.can_double:
                     self.double_down()
 
-            if self.state == "dealer_turn":
-                while self.hand_value(self.dealer_hand) < 17:
-                    self.dealer_hand.append(self.draw_card())
-
-                self.state = "payout"
-                self.game_results()
-
             elif self.state == "payout":
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_SPACE:
                     self.state = "betting"
+                    self.player_hand = []
+                    self.dealer_hand = []
                     self.message = "Place your bet"
 
     """Game Logic"""
@@ -83,7 +84,8 @@ class Blackjack:
         self.player_hand = [self.draw_card(), self.draw_card()]
         self.dealer_hand = [self.draw_card(), self.draw_card()]
         self.can_double = True
-        self.state = "player_turn"
+        self.player_BJ = False
+        self.set_state("player_turn")
         self.message = "H=Hit D=Double S=Stand"
         self.check_bj()
 
@@ -92,46 +94,64 @@ class Blackjack:
         self.can_double = False
 
         if self.hand_value(self.player_hand) > 21:
-            self.state = "payout"
+            self.set_state("payout")
             self.message = "You Bust!"
 
     def double_down(self):
         self.bet *= 2
         self.player_hand.append(self.draw_card())
         self.can_double = False
-        self.state = "dealer_turn"
+        self.set_state("dealer_turn")
         self.message = "Doubled Down!"
 
     def draw_card(self):
         return self.shoe.deal_next_card()
 
     def update(self, dt):
-        pass
+        now = pygame.time.get_ticks()
+
+        if self.state == "dealer_turn":
+            if now - self.state_start_time >= self.state_delay:
+                if self.hand_value(self.dealer_hand) < 17:
+                    self.dealer_hand.append(self.draw_card())
+                    self.set_state("dealer_turn", 700)
+                else:
+                    self.set_state("payout", 700)
+                    self.game_results()
 
     def check_bj(self):
         player = self.hand_value(self.player_hand)
+        dealer = self.hand_value(self.dealer_hand)
         if player == 21:
             self.player_BJ = True
-            self.state = "payout"
+            self.set_state("payout")
             self.message = "BLACKJACK!"
+        elif dealer == 21:
+            self.set_state("payout")
+            self.message = "Dealer Blackjack, YOU LOSE"
 
     def game_results(self):
         player = self.hand_value(self.player_hand)
         dealer = self.hand_value(self.dealer_hand)
         winnings = self.bet
 
-        if player > dealer or dealer > 21:
+        if player > 21:
+            self.message = "You Bust!"
+            self.player_balance -= self.bet
+
+        elif dealer > 21 or player > dealer:
             if self.player_BJ:
                 winnings *= 1.5
-                self.player_BJ = False
-            self.message = "YOU WIN!"
+                self.message = "BLACKJACK! YOU WIN!"
+            else:
+                self.message = "YOU WIN!"
             self.player_balance += winnings
 
         elif player < dealer:
             self.message = "DEALER WIN!"
             self.player_balance -= self.bet
 
-        elif player == dealer:
+        else:
             self.message = "PUSH!"
 
     "Game Rendering"

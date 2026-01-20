@@ -1,9 +1,7 @@
-# main.py
 import pygame
 from ui.menu import Menu
 from games.blackjack import Blackjack
 from games.baccarat import Baccarat
-
 
 
 def main():
