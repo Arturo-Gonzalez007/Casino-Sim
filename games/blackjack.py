@@ -1,6 +1,7 @@
 import pygame
+
+import core.player
 from rng.shoe import Shoe
-from core.player import balance
 
 
 class Blackjack:
@@ -18,7 +19,6 @@ class Blackjack:
         self.state = "betting"
         self.message = "Place your bet (SPACE)"
 
-        self.player_balance = balance
         self.bet = 10
         self.current_bet = 0
         self.hands_bet = []
@@ -30,6 +30,8 @@ class Blackjack:
         self.split_active = False
 
         self.can_double = True
+        self.doubled = False
+        self.hand_count = 0
         self.player_BJ = False
 
         self.shoe = Shoe(num_decks=6)
@@ -57,7 +59,7 @@ class Blackjack:
 
             if self.state == "betting":
                 if event.key == pygame.K_UP:
-                    if self.current_bet + 10 <= self.player_balance:
+                    if self.current_bet + 10 <= core.player.balance:
                         self.current_bet += 10
                         self.message = f"Bet: ${self.current_bet}"
                 elif event.key == pygame.K_DOWN:
@@ -65,7 +67,7 @@ class Blackjack:
                         self.current_bet -= 10
                         self.message = f"Bet: ${self.current_bet}"
                 elif event.key == pygame.K_SPACE and self.current_bet > 0:
-                    self.player_balance -= self.current_bet
+                    core.player.balance -= self.current_bet
                     self.initial_deal()
 
 
@@ -138,11 +140,12 @@ class Blackjack:
     def double_down(self):
         bet = self.hand_bets[self.current_hand]
 
-        if self.player_balance < bet:
+        if core.player.balance < bet:
             self.message = "Not enough balance to double"
             return
 
-        self.player_balance -= bet
+        core.player.balance -= bet
+        self.doubled = True
         self.hand_bets[self.current_hand] *= 2
 
         hand = self.all_hands[self.current_hand]
@@ -164,11 +167,11 @@ class Blackjack:
         )
 
     def split_hand(self):
-        if self.player_balance < self.current_bet:
+        if core.player.balance < self.current_bet:
             self.message = "Not enough balance to split"
             return
 
-        self.player_balance -= self.current_bet
+        core.player.balance -= self.current_bet
 
         card1, card2 = self.player_hand
 
@@ -206,10 +209,11 @@ class Blackjack:
         if player == 21:
             self.player_BJ = True
             self.set_state("payout")
-            self.message = "BLACKJACK!"
+            self.game_results()
         elif dealer == 21:
             self.set_state("payout")
             self.message = "Dealer Blackjack"
+            self.game_results()
 
     def game_results(self):
         dealer = self.hand_value(self.dealer_hand)
@@ -223,11 +227,22 @@ class Blackjack:
 
             if dealer > 21 or player > dealer:
                 win = bet * (1.5 if self.player_BJ else 1)
-                self.player_balance += bet + win
+                core.player.balance += bet + win
+                if self.player_BJ:
+                    self.message = f"BLACKJACK! YOU WIN +${self.current_bet * 1.5}"
+                elif self.doubled:
+                    self.message = f"YOU WIN +${self.current_bet *2}"
+                elif self.split_active:
+                    self.hand_count += 1
+                    self.message = f"YOU WIN +${self.current_bet * self.hand_count}"
+                else:
+                    self.message = f"YOU WIN +${self.current_bet} (SPACE)"
             elif player == dealer:
-                self.player_balance += bet
+                core.player.balance += bet
+                self.message = "PUSH! (SPACE)"
+            else:
+                self.message = "YOU LOSE! (SPACE)"
 
-        self.message = "Round Over (SPACE)"
 
     def reset_round(self):
         self.state = "betting"
@@ -237,6 +252,8 @@ class Blackjack:
         self.all_hands = []
         self.current_hand = 0
         self.split_active = False
+        self.doubled = False
+        self.hand_count = 0
 
     "Game Rendering"
     def draw(self):
@@ -272,7 +289,7 @@ class Blackjack:
 
         lines.append(f"Dealer: {dealer_display} ({dealer_value})")
         lines.append(self.message)
-        lines.insert(1, f"Balance: ${self.player_balance}")
+        lines.insert(1, f"Balance: ${core.player.balance}")
         lines.insert(2, f"Bet: ${self.current_bet}")
 
         y = 50

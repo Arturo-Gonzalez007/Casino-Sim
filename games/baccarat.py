@@ -1,7 +1,10 @@
 import pygame
+
+import core.player
 from rng.shoe import Shoe
 
 
+"""ADD PAYOUT TO BALANCE!!!"""
 class Baccarat:
     BETTING = "betting"
     DEAL = "dealing"
@@ -26,15 +29,16 @@ class Baccarat:
         self.player_hand = []
         self.banker_hand = []
         self.place_bet = None
+        self.current_bet = 0
         self.third_card = False
         self.message = ""
 
         # State control
-        self.state = self.BETTING
+        self.state = "betting"
         self.state_start_time = pygame.time.get_ticks()
         self.state_delay = 0
 
-    def set_state(self, new_state, delay=800):
+    def set_state(self, new_state, delay=700):
         self.state = new_state
         self.state_delay = delay
         self.state_start_time = pygame.time.get_ticks()
@@ -46,18 +50,30 @@ class Baccarat:
             if event.key == pygame.K_ESCAPE:
                 self.exit_to_menu = True
 
-            if self.state == self.BETTING:
+            if self.state == "betting":
+                if event.key == pygame.K_UP:
+                    if self.current_bet + 10 <= core.player.balance:
+                        self.current_bet += 10
+                        self.message = f"Bet: ${self.current_bet}"
+                elif event.key == pygame.K_DOWN:
+                    if self.current_bet >= 10:
+                        self.current_bet -= 10
+                        self.message = f"Bet: ${self.current_bet}"
+
                 if event.key == pygame.K_p:
                     self.place_bet = "Player"
                     self.message = "Bet on PLAYER"
-                    self.set_state(self.DEAL, 700)
 
                 elif event.key == pygame.K_b:
                     self.place_bet = "Banker"
                     self.message = "Bet on BANKER"
-                    self.set_state(self.DEAL, 700)
 
-            elif self.state == self.PAYOUT:
+                elif event.key == pygame.K_SPACE and self.current_bet > 0 and self.place_bet != None:
+                    core.player.balance -= self.current_bet
+                    self.set_state("dealing")
+
+
+            elif self.state == "payout":
                 if event.key == pygame.K_SPACE:
                     self.reset_round()
 
@@ -65,10 +81,10 @@ class Baccarat:
     def update(self, dt):
         now = pygame.time.get_ticks()
 
-        if self.state == self.DEAL:
+        if self.state == "dealing":
             if now - self.state_start_time >= self.state_delay:
                 self.initial_deal()
-                self.set_state(self.PLAYER_TURN, 700)
+                self.set_state("player_turn")
 
         elif self.state == self.PLAYER_TURN:
             if now - self.state_start_time >= self.state_delay:
@@ -77,12 +93,12 @@ class Baccarat:
                     self.third_card = True
                 self.set_state(self.BANKER_TURN, 700)
 
-        elif self.state == self.BANKER_TURN:
+        elif self.state == "banker_turn":
             if now - self.state_start_time >= self.state_delay:
                 self.banker_turn()
-                self.set_state(self.PAYOUT, 1000)
+                self.set_state("payout")
 
-        elif self.state == self.PAYOUT:
+        elif self.state == "payout":
             if not self.message.startswith("Result"):
                 self.game_results()
 
@@ -129,6 +145,7 @@ class Baccarat:
 
         if result == self.place_bet:
             self.message = f"Result: {result} — YOU WIN!"
+            core.player.balance += self.current_bet*2
         else:
             self.message = f"Result: {result} — YOU LOSE!"
 
@@ -138,7 +155,7 @@ class Baccarat:
         self.place_bet = None
         self.third_card = False
         self.message = ""
-        self.set_state(self.BETTING)
+        self.set_state("betting")
 
     """Game Rendering"""
     def draw(self):
@@ -146,7 +163,9 @@ class Baccarat:
 
         lines = [
             "BACCARAT",
-            f"Bet: {self.place_bet}",
+            f"Balance: {core.player.balance}",
+            f"Bet: {self.current_bet}",
+            f"Hand: {self.place_bet}",
             f"Player Hand: {self.player_hand} ({self.hand_value(self.player_hand)})",
             f"Banker Hand: {self.banker_hand} ({self.hand_value(self.banker_hand)})",
             self.message,
