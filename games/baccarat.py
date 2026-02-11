@@ -4,7 +4,6 @@ import core.player
 from rng.shoe import Shoe
 
 
-"""ADD PAYOUT TO BALANCE!!!"""
 class Baccarat:
     BETTING = "betting"
     DEAL = "dealing"
@@ -29,6 +28,7 @@ class Baccarat:
         self.player_hand = []
         self.banker_hand = []
         self.place_bet = None
+        self.side_bet = None
         self.current_bet = 0
         self.third_card = False
         self.message = ""
@@ -68,15 +68,17 @@ class Baccarat:
                     self.place_bet = "Banker"
                     self.message = "Bet on BANKER"
 
+                if event.key == pygame.K_t:
+                    self.side_bet = "Tie"
+                    self.message = "Bet on TIE"
+
                 elif event.key == pygame.K_SPACE and self.current_bet > 0 and self.place_bet != None:
                     core.player.balance -= self.current_bet
                     self.set_state("dealing")
 
-
             elif self.state == "payout":
                 if event.key == pygame.K_SPACE:
                     self.reset_round()
-
 
     def update(self, dt):
         now = pygame.time.get_ticks()
